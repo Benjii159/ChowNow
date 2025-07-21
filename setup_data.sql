@@ -1,13 +1,13 @@
 --format & read in order data
 WITH order_data AS (
 	SELECT 
-      orderId 			    AS order_id
-		, customerId 		    AS customer_id
-		, orderDate 		    AS order_date
-		, product 			    AS product
-		, shippingMethod 		AS shipping_method
-		, paymentMethod 		AS payment_method
-		, orderStatus 		  AS order_status
+      		  orderId		AS order_id
+		, customerId 		AS customer_id
+		, orderDate 		AS order_date
+		, product 		AS product
+		, shippingMethod 	AS shipping_method
+		, paymentMethod 	AS payment_method
+		, orderStatus 		AS order_status
 		, discountUsed = 1 	AS is_discount_used
 	FROM order_data_source
 	)
@@ -15,36 +15,36 @@ WITH order_data AS (
 --format & read in support data
 , customer_support_data AS (
 	SELECT
-		  orderId 			AS order_id
+		  orderId 		AS order_id
 		, customerId 		AS customer_id
-		, topic			    AS topic
-		, CSAT 			    AS csat
+		, topic			AS topic
+		, CSAT 			AS csat
 	FROM customer_support_data_source
 	)
 
 --format & read in customer data
 , customer_data AS (
 	SELECT
-		  customerId 		      AS customer_id
+		  customerId 		AS customer_id
 		, acquisitionSource 	AS acquisition_source
-		, shippingLocation 	  AS shipping_location
-		, marketable = 1		  AS is_marketable
+		, shippingLocation 	AS shipping_location
+		, marketable = 1	AS is_marketable
 	FROM customer_data_source
 	)
 
 --format & read in product data
 , product_data AS (
 	SELECT
-		  product 			AS product
-		, price 			  AS price
-		, COGS 			    AS cogs
+		  product 		AS product
+		, price 		AS price
+		, COGS 			AS cogs
 	FROM product_data_source
 	)
 
 -- create wide dataset for analysis, add custom dimensions
 , order_data_wide AS (
 	SELECT
-      o.order_id
+      		  o.order_id
 		, o.customer_id
 		, c.acquisition_source
 		, c.shipping_locations
@@ -62,8 +62,8 @@ WITH order_data AS (
 		, s.csat
 	FROM order_data o 
 		LEFT JOIN customer_support_data s 	ON o.order_id = s.order_id
-		LEFT JOIN customer_data c 		      ON o.customer_id = c.customer_id
-		LEFT JOIN product_data p 		        ON o.product = p.product
+		LEFT JOIN customer_data c 		ON o.customer_id = c.customer_id
+		LEFT JOIN product_data p 		ON o.product = p.product
 	)
 
 -- add next order information (I forget without running the code if we can do this in the previous CTE. I think we can but separating just in case!)

@@ -69,8 +69,9 @@ WITH order_data AS (
 -- add next order information (I forget without running the code if we can do this in the previous CTE. I think we can but separating just in case!)
 SELECT
 	  *
-	, LEAD(order_id)  OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_order_id
-	, LEAD(product)   OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_product
-	, LEAD(price)     OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_price
+	, LEAD(order_id)   OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_order_id
+	, LEAD(product)    OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_product
+	, LEAD(price)      OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_price
+	, LEAD(order_date) OVER (PARTITION BY customer_id ORDER BY order_date ASC) AS next_order_date
 FROM order_data_wide
 QUALIFY ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date ASC) = 1

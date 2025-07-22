@@ -7,21 +7,10 @@ library(dplyr)
 library(janitor)
 
 # Import data
-orders_raw <- read_csv('/Users/ben/Downloads/Copy of Candidate Copy - SR. DATA ANALYST - INTERVIEW ASSIGNMENT - Order Data Wide (2).csv')
+orders_raw <- read_csv('orders.csv')
 
 # Clean data
 orders <- orders_raw %>% clean_names() %>% filter(is_first_order == 1)
-
-# Calculate reorder rate by product
-reorder_rates <- orders %>%
-  group_by(price) %>%
-  dplyr::summarise(
-    total_orders = n(),
-    reorders = sum(within60, na.rm = TRUE),
-    reorder_rate = reorders / total_orders,
-    .groups = 'drop'
-  ) %>%
-  arrange(desc(reorder_rate))
 
 ############## LOOP CHARTS #######
 # Function to create reorder rate chart for any grouping variable
@@ -41,22 +30,34 @@ create_reorder_chart <- function(data, group_var, chart_title = NULL, filename_p
       reorder_rate = reorders / total_orders,
       .groups = 'drop'
     ) %>%
+    mutate(
+      # Wilson Score CI
+      z = 1.96,  # for 95% CI
+      n_adj = total_orders + z^2,
+      p_adj = (reorders + z^2/2) / n_adj,
+      se_adj = sqrt(p_adj * (1 - p_adj) / n_adj),
+      ci_lower = pmax(0, p_adj - z * se_adj),
+      ci_upper = pmin(1, p_adj + z * se_adj)
+    ) %>%
+    select(-z, -n_adj, -p_adj, -se_adj) %>%
     arrange(desc(reorder_rate))
   
   # Create the chart
   p <- ggplot(reorder_rates, aes(x = reorder(!!sym(group_var), reorder_rate), y = reorder_rate)) +
     geom_col(aes(width = scales::rescale(total_orders, to = c(0.4, 1))), 
              fill = "#324A5F", alpha = 1.0) +
-    geom_text(aes(label = paste0(round(reorder_rate * 100, 1), "% (", 
-                                 scales::comma(total_orders), " orders)")), 
-              hjust = -0.05, size = 3.2) +
+    geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper),
+                  width = 0.2, color = "red", size = 0.8) +
+    geom_text(aes(y = 0.02, label = paste0(round(reorder_rate * 100, 1), "% (", 
+                                           scales::comma(total_orders), " orders)")), 
+              hjust = 0, vjust = 0.5, size = 3.2, color = "white") +
     coord_flip() +
     scale_y_continuous(labels = scales::percent_format(), 
                        limits = c(0, 1),
                        breaks = seq(0, 1, 0.2)) +
     labs(
       title = chart_title,
-      subtitle = "Bar width represents order volume, labels show exact counts",
+      subtitle = "Bar width represents order volume, labels show exact counts. Red bars show 95% confidence intervals.",
       x = str_to_title(gsub("_", " ", group_var)),
       y = "Reorder Rate",
       caption = paste("Groups ordered by reorder rate (highest to lowest)")
@@ -69,7 +70,7 @@ create_reorder_chart <- function(data, group_var, chart_title = NULL, filename_p
       panel.grid.major.y = element_blank(),
       panel.grid.minor = element_blank()
     )
-  
+
   # Display the plot
   print(p)
   
@@ -96,28 +97,3 @@ for(group_var in grouping_vars) {
   cat("\n=== Creating chart for", group_var, "===\n")
   charts[[group_var]] <- create_reorder_chart(orders, group_var)
 }
-
-
-
-# Pairwise prop test
-# Product data
-sold <- c(17607, 1304, 565, 524)
-returned <- round(sold * c(0.727, 0.808, 0.724, 0.723))
-
-# Run pairwise proportion test with Holm correction
-pairwise_result <- pairwise.prop.test(
-  x = returned,
-  n = sold,
-  p.adjust.method = "holm"
-)
-
-# View result
-print(pairwise_result)
-
-
-
-
-
-
-
-
